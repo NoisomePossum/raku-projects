@@ -1,0 +1,9 @@
+use v6;
+unit module Keys;
+
+constant $DD_API_KEY is export = '<API_KEY>';
+constant $DD_API_KEY_EU is export = '<API_KEY>';
+constant $DD_API_KEY_STAGING is export = '<API_KEY>';
+
+constant $HTTP_ENDPOINT is export = 'http-intake.logs.datadoghq';
+constant $STAGING_ENDPOINT is export = '<STAGING_ENDPOINT>';

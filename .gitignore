@@ -1,0 +1,4 @@
+**/lib/Keys.rakumod
+**/lib/.precomp
+**/ddlog-forwarder/*.log
+**/ddlog-forwarder/specs.txt
