@@ -2,7 +2,7 @@ use v6;
 use LibCurl::HTTP;
 use Getopt::Long;
 
-use lib 'lib';
+use lib $?FILE.IO.parent.child('lib');
 use Keys;
 
 sub MAIN(
@@ -10,7 +10,6 @@ sub MAIN(
     Str :e(:$env) = "us" # String; defines which instance (EU, US etc.) to send the logs to
 ) {
 
-    # TODO - add better way to pass env variables into sub modules
     send_message($env, $input);
 
 }
@@ -64,7 +63,10 @@ sub send_message ($env, $input) {
 
 }
 
+# TODO - add case for sending logs through dev
 # TODO - accept a list of tags (service, source etc.) and apply them in the url
+# TODO - individual arguments for source, service, host with defaults
+# TODO - add better way to pass env variables into sub modules
 # sub parse_tags ($tags) {
 # }
 
