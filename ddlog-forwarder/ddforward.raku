@@ -7,19 +7,31 @@ use Keys;
 
 sub MAIN(
     $input, # filepath of lo file or string of single log
-    Str :e(:$env) = "us" # String; defines which instance (EU, US etc.) to send the logs to
+    Str :e(:$env) = "us", # String; defines which instance (EU, US etc.) to send the logs to
+    Str :s(:$src) = "cli", # Adds a source to the log
+    Str :r(:$service) = "custom", # Adds a service to the log
+    Str :h(:$host), # Adds a host to the log
+    Str :t(:$tags) # Adds tags to the log
 ) {
 
-    send_message($env, $input);
+    send_message($env, $input, $src, $service, $host, $tags);
 
 }
 
-sub send_message ($env, $input) {
+sub send_message ($env, $input, $src, $service, $host, $tags) {
     my $KEY;
     my $endpoint = $HTTP_ENDPOINT;
     my $domain;
     my $curl = LibCurl::HTTP.new;
 
+    my $logparams = "?ddsource=$src&service=$service";
+
+    if $host {
+        $logparams = "$logparams&host=$host";
+    }
+    if $tags {
+        $logparams = "$logparams&ddtags=$tags";
+    }
 
     given $env {
         when 'eu' {
@@ -53,7 +65,7 @@ sub send_message ($env, $input) {
         when Str {
             
             $curl.set-header(content-type => 'application/json');
-            $curl.setopt(URL => "https://$endpoint.$domain/v1/input/$KEY", postfields => $input);
+            $curl.setopt(URL => "https://$endpoint.$domain/v1/input/$KEY$logparams", postfields => $input);
 
         }
     }
@@ -64,8 +76,6 @@ sub send_message ($env, $input) {
 }
 
 # TODO - add case for sending logs through dev
-# TODO - accept a list of tags (service, source etc.) and apply them in the url
-# TODO - individual arguments for source, service, host with defaults
 # TODO - add better way to pass env variables into sub modules
 # sub parse_tags ($tags) {
 # }
