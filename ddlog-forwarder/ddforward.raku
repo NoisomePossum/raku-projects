@@ -36,11 +36,11 @@ sub send_message ($env, $input, $src, $service, $host, $tags) {
     given $env {
         when 'eu' {
             $domain = 'eu';
-            $KEY = $DD_API_KEY;
+            $KEY = $DD_API_KEY_EU;
         }
         when 'us' {
             $domain = 'com';
-            $KEY = $DD_API_KEY_EU;
+            $KEY = $DD_API_KEY;
         }
         when 'staging' {
             $endpoint = $STAGING_ENDPOINT;
@@ -75,6 +75,7 @@ sub send_message ($env, $input, $src, $service, $host, $tags) {
 
 }
 
+# TODO - don't overwrite ddsource, service values when these values are in the log JSON and these parameters aren't specified in command line
 # TODO - add case for sending logs through dev
 # TODO - add better way to pass env variables into sub modules
 # sub parse_tags ($tags) {
