@@ -1,39 +1,32 @@
 use v6;
 use LibCurl::HTTP;
-use Getopt::Long;
 
 use lib $?FILE.IO.parent.child('lib');
 use Keys;
 
 sub MAIN(
     $input, # filepath of lo file or string of single log
-    Str :e(:$env) = "us", # String; defines which instance (EU, US etc.) to send the logs to
-    Str :s(:$src) = "cli", # Adds a source to the log
-    Str :r(:$service) = "custom", # Adds a service to the log
-    Str :h(:$host), # Adds a host to the log
-    Str :t(:$tags) # Adds tags to the log
+    Str :e(:$env) = "us", # String; defines which instance (eu, us, staging) to send the logs to
+    Str :src(:$source) = "cli", # Overrides the default source value
+    Str :ser(:$service) = "custom", # Overrides the default service value
+    Str :h(:$host), # Adds a host
+    Str :t(:$tags), # Add tags with comma-separated string of key/vaue pairs. Ex: key1:value1,key2:value2
+    Bool :$nodef = False # Deactivates default values for source and service.
 ) {
 
-    send_message($env, $input, $src, $service, $host, $tags);
+    my %options = input => $input, env => $env, source => $source, service => $service, host => $host, tags => $tags, nodef => $nodef;
+
+    send_message(%options);
 
 }
 
-sub send_message ($env, $input, $src, $service, $host, $tags) {
+sub send_message (%options) {
     my $KEY;
     my $endpoint = $HTTP_ENDPOINT;
     my $domain;
     my $curl = LibCurl::HTTP.new;
 
-    my $logparams = "?ddsource=$src&service=$service";
-
-    if $host {
-        $logparams = "$logparams&host=$host";
-    }
-    if $tags {
-        $logparams = "$logparams&ddtags=$tags";
-    }
-
-    given $env {
+    given %options{'env'} {
         when 'eu' {
             $domain = 'eu';
             $KEY = $DD_API_KEY_EU;
@@ -49,23 +42,32 @@ sub send_message ($env, $input, $src, $service, $host, $tags) {
         }
     }
 
-    given $input {
+    my $logparams = $KEY;
+    if !%options{'nodef'} {
+        $logparams = "$logparams?ddsource=%options{'source'}&service=%options{'service'}";
+    }
+
+    if %options{'host'} {
+        $logparams = "$logparams&host=%options{'host'}";
+    }
+    if %options{'tags'} {
+        $logparams = "$logparams&ddtags=%options{'tags'}";
+    }
+
+    given %options{'input'} {
         # Do some stuff when input is a file
-        when $input.IO ~~ :f {
+        when %options{'input'}.IO ~~ :f {
 
-            my $logs = slurp($input.IO);
-
-            # We can set the size of the payload here
-            # $curl.setopt(postfieldsize => <size>);
+            my $logs = slurp(%options{'input'}.IO);
 
             $curl.set-header(content-type => 'text/plain');
-            $curl.setopt(URL => "https://$endpoint.$domain/v1/input/$KEY", postfields => $logs);
+            $curl.setopt(URL => "https://$endpoint.$domain/v1/input/$logparams", postfields => $logs);
         }
         # Do some stuff when input is a string
         when Str {
             
             $curl.set-header(content-type => 'application/json');
-            $curl.setopt(URL => "https://$endpoint.$domain/v1/input/$KEY$logparams", postfields => $input);
+            $curl.setopt(URL => "https://$endpoint.$domain/v1/input/$logparams", postfields => %options{'input'});
 
         }
     }
@@ -74,13 +76,3 @@ sub send_message ($env, $input, $src, $service, $host, $tags) {
     say $curl.response-code;
 
 }
-
-# TODO - don't overwrite ddsource, service values when these values are in the log JSON and these parameters aren't specified in command line
-# TODO - add case for sending logs through dev
-# TODO - add better way to pass env variables into sub modules
-# sub parse_tags ($tags) {
-# }
-
-# Referenc doc : 
-# https://github.com/DataDog/browser-sdk/blob/9acbda2858cf11f2eeefd7bcbf165795195069b5/packages/core/src/configuration.ts#L113-L119
-# curl -X POST "https://browser-http-intake.logs.datadoghq.com/v1/input/<CLIENT_TOKEN>?service=testing&ddsource=testing" -H "Content-Type: application/json" -d '{"message":"this is a test"}'
