@@ -21,28 +21,35 @@ sub MAIN(
 }
 
 sub send_message (%options) {
-    my $KEY;
-    my $endpoint = $HTTP_ENDPOINT;
-    my $domain;
+
     my $curl = LibCurl::HTTP.new;
 
-    given %options{'env'} {
-        when 'eu' {
-            $domain = 'eu';
-            $KEY = $DD_API_KEY_EU;
-        }
-        when 'us' {
-            $domain = 'com';
-            $KEY = $DD_API_KEY;
-        }
-        when 'staging' {
-            $endpoint = $STAGING_ENDPOINT;
-            $domain = 'com';
-            $KEY = $DD_API_KEY_STAGING;
-        }
+    my $URL = getURL(%options);
+
+    # If input is a file stringify its contents and set header to plain text.
+    if %options{'input'}.IO ~~ :f {
+
+        %options{'input'} = slurp(%options{'input'}.IO);
+
+        $curl.set-header(content-type => 'text/plain');
+    }
+    # If input is not a file (plain string) set header to application/json.
+    else {
+        
+        $curl.set-header(content-type => 'application/json');
+
     }
 
+    $curl.setopt(URL => "$URL", postfields => %options{'input'});
+    $curl.perform;
+    say $curl.response-code;
+
+}
+
+sub getParams ($KEY, %options) {
+
     my $logparams = $KEY;
+
     if !%options{'nodef'} {
         $logparams = "$logparams?ddsource=%options{'source'}&service=%options{'service'}";
     }
@@ -54,25 +61,35 @@ sub send_message (%options) {
         $logparams = "$logparams&ddtags=%options{'tags'}";
     }
 
-    given %options{'input'} {
-        # Do some stuff when input is a file
-        when %options{'input'}.IO ~~ :f {
+    $logparams;
+}
 
-            my $logs = slurp(%options{'input'}.IO);
+sub getURL (%options) {
+    
+    my $endpoint;
+    my $domain;
+    my $KEY;
 
-            $curl.set-header(content-type => 'text/plain');
-            $curl.setopt(URL => "https://$endpoint.$domain/v1/input/$logparams", postfields => $logs);
+    given %options{'env'} {
+        when 'eu' {
+            $endpoint = $HTTP_ENDPOINT;
+            $domain = 'eu';
+            $KEY = $DD_API_KEY_EU;
         }
-        # Do some stuff when input is a string
-        when Str {
-            
-            $curl.set-header(content-type => 'application/json');
-            $curl.setopt(URL => "https://$endpoint.$domain/v1/input/$logparams", postfields => %options{'input'});
-
+        when 'us' {
+            $endpoint = $HTTP_ENDPOINT;
+            $domain = 'com';
+            $KEY = $DD_API_KEY;
+        }
+        when 'staging' {
+            $endpoint = $STAGING_ENDPOINT;
+            $domain = 'com';
+            $KEY = $DD_API_KEY_STAGING;
         }
     }
 
-    $curl.perform;
-    say $curl.response-code;
+    my $logparams = getParams($KEY, %options);
+
+    my $URL = "https://$endpoint.$domain/v1/input/$logparams";
 
 }
