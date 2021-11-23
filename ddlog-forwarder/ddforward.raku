@@ -54,6 +54,9 @@ sub getParams ($KEY, %options) {
     if !%options{'nodef'} {
         $logparams = "$logparams?ddsource=%options{'source'}&service=%options{'service'}";
     }
+    else {
+      $logparams = "$logparams?";
+    }
 
     if %options{'host'} {
         $logparams = "$logparams&host=%options{'host'}";
