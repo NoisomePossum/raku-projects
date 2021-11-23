@@ -43,6 +43,7 @@ sub send_message (%options) {
     $curl.setopt(URL => "$URL", postfields => %options{'input'});
     $curl.perform;
     say $curl.response-code;
+    say $curl.statusline;
 
 }
 
